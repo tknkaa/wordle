@@ -17,13 +17,21 @@ var greetCmd = &cobra.Command{
 	Long:  `A simple command that takes a name as an argument and prints a friendly greeting.`,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		isUpperCase, _ := cmd.Flags().GetBool("uppercase")
 		name := strings.Join(args, " ")
-		fmt.Printf("Hello, %s\n", name)
+		greeting := fmt.Sprintf("Hello, %s\n", name)
+
+		if isUpperCase {
+			greeting = strings.ToUpper(greeting)
+		}
+
+		fmt.Println(greeting)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(greetCmd)
+	greetCmd.Flags().BoolP("uppercase", "u", false, "Print the greeting in uppercase")
 
 	// Here you will define your flags and configuration settings.
 
