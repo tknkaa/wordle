@@ -1,0 +1,8 @@
+CREATE TABLE games (
+  id UUID PRIMARY KEY DEFAULT get_random_uuid(),
+  answer TEXT NOT NULL,
+  guesses TEXT[] NOT NULL DEFAULT '{}',
+  solved BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMP NOT NULL
+);
