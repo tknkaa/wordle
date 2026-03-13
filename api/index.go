@@ -16,7 +16,7 @@ func SetupRouter() *chi.Mux {
 	return r
 }
 
-func VercelHundler(w http.ResponseWriter, r *http.Request) {
+func VercelHandler(w http.ResponseWriter, r *http.Request) {
 	router := SetupRouter()
 	router.ServeHTTP(w, r)
 }
