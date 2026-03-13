@@ -1,4 +1,6 @@
+Prerequisite
+- vercel cli
 ```sh
-go run main.go # for development server
+vercel dev # for development server
 vercel deploy # to deploy
 ```
