@@ -7,39 +7,63 @@ package db
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
 
 const createGame = `-- name: CreateGame :one
-INSERT INTO games (answer, expires_at)
+INSERT INTO games (user_id, answer)
 VALUES ($1, $2)
-RETURNING id, answer, guesses, solved, created_at, expires_at
+RETURNING id, user_id, answer, guesses, solved, created_at
 `
 
 type CreateGameParams struct {
-	Answer    string
-	ExpiresAt time.Time
+	UserID uuid.UUID
+	Answer string
 }
 
 func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, error) {
-	row := q.db.QueryRowContext(ctx, createGame, arg.Answer, arg.ExpiresAt)
+	row := q.db.QueryRowContext(ctx, createGame, arg.UserID, arg.Answer)
 	var i Game
 	err := row.Scan(
 		&i.ID,
+		&i.UserID,
 		&i.Answer,
 		pq.Array(&i.Guesses),
 		&i.Solved,
 		&i.CreatedAt,
-		&i.ExpiresAt,
 	)
 	return i, err
 }
 
+const createSession = `-- name: CreateSession :one
+INSERT INTO sessions (user_id)
+VALUES ($1)
+RETURNING id, user_id, expires_at
+`
+
+func (q *Queries) CreateSession(ctx context.Context, userID uuid.UUID) (Session, error) {
+	row := q.db.QueryRowContext(ctx, createSession, userID)
+	var i Session
+	err := row.Scan(&i.ID, &i.UserID, &i.ExpiresAt)
+	return i, err
+}
+
+const createUser = `-- name: CreateUser :one
+INSERT INTO users DEFAULT VALUES
+RETURNING id, created_at
+`
+
+func (q *Queries) CreateUser(ctx context.Context) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUser)
+	var i User
+	err := row.Scan(&i.ID, &i.CreatedAt)
+	return i, err
+}
+
 const getGame = `-- name: GetGame :one
-SELECT id, answer, guesses, solved, created_at, expires_at FROM games
+SELECT id, user_id, answer, guesses, solved, created_at FROM games
 WHERE id = $1
 `
 
@@ -48,11 +72,44 @@ func (q *Queries) GetGame(ctx context.Context, id uuid.UUID) (Game, error) {
 	var i Game
 	err := row.Scan(
 		&i.ID,
+		&i.UserID,
 		&i.Answer,
 		pq.Array(&i.Guesses),
 		&i.Solved,
 		&i.CreatedAt,
-		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const getSession = `-- name: GetSession :one
+SELECT id, user_id, expires_at FROM sessions
+WHERE id = $1
+AND expires_at > NOW()
+`
+
+func (q *Queries) GetSession(ctx context.Context, id uuid.UUID) (Session, error) {
+	row := q.db.QueryRowContext(ctx, getSession, id)
+	var i Session
+	err := row.Scan(&i.ID, &i.UserID, &i.ExpiresAt)
+	return i, err
+}
+
+const getTodayGameByUser = `-- name: GetTodayGameByUser :one
+SELECT id, user_id, answer, guesses, solved, created_at FROM games
+WHERE user_id = $1
+AND created_at::DATE = CURRENT_DATE
+`
+
+func (q *Queries) GetTodayGameByUser(ctx context.Context, userID uuid.UUID) (Game, error) {
+	row := q.db.QueryRowContext(ctx, getTodayGameByUser, userID)
+	var i Game
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Answer,
+		pq.Array(&i.Guesses),
+		&i.Solved,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -61,7 +118,7 @@ const updateGame = `-- name: UpdateGame :one
 UPDATE games
 SET guesses = $1, solved = $2
 WHERE id = $3
-RETURNING id, answer, guesses, solved, created_at, expires_at
+RETURNING id, user_id, answer, guesses, solved, created_at
 `
 
 type UpdateGameParams struct {
@@ -75,11 +132,11 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 	var i Game
 	err := row.Scan(
 		&i.ID,
+		&i.UserID,
 		&i.Answer,
 		pq.Array(&i.Guesses),
 		&i.Solved,
 		&i.CreatedAt,
-		&i.ExpiresAt,
 	)
 	return i, err
 }
